@@ -42,8 +42,9 @@ payload map {
                             </ee:variables>
                         </ee:transform>
                         <logger level="INFO" doc:name="Log Accounts" doc:id="ba2aca3c-1865-4f3a-b3a2-13f3d86edd53" message="Accounts to upsert: #[output application/json --- payload]" />
-						<salesforce:upsert type="Account" doc:name="Upsert Accounts" doc:id="7e1bb5b7-85ec-4b60-9350-d9ac956f4d46" config-ref="Salesforce_Config" externalIdFieldName="Id"/>
-                        <logger level="INFO" doc:name="Log Upsert result" doc:id="80af8570-bee4-415e-8880-b5b017873028" message="#[output application/json --- payload]"/>
+                        <salesforce:upsert type="Account" doc:name="Upsert Accounts" doc:id="7e1bb5b7-85ec-4b60-9350-d9ac956f4d46"
+                            config-ref="Salesforce_Config" externalIdFieldName="Id" />
+                        <logger level="INFO" doc:name="Log Upsert result" doc:id="80af8570-bee4-415e-8880-b5b017873028" message="#[output application/json --- payload]" />
                     </batch:aggregator>
                 </batch:step>
             </batch:process-records>
@@ -84,9 +85,9 @@ output text/plain
     <flow name="queryFlow" doc:id="b0338e9a-92cc-4b2a-b219-4360c4a7bdb0">
         <s4hana:query service="API_BUSINESS_PARTNER" entityType="A_BusinessPartner" doc:name="Query Business Partners" doc:id="cc3b34ed-f346-4267-9e24-1d2174823eb5"
             config-ref="SAP_S_4HANA_Config" filter="BusinessPartnerCategory eq '2' " top="#[p('s4hana.partners.limit')]" select="OrganizationBPName1,BusinessPartner,Industry" />
-		<ee:transform doc:name="Set Variable and input data" doc:id="0e7f5883-05df-462f-a5cd-bacb003d78dd" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+        <ee:transform doc:name="Set Variable and input data" doc:id="0e7f5883-05df-462f-a5cd-bacb003d78dd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 payload map {
@@ -94,31 +95,33 @@ payload map {
 	Name: $.OrganizationBPName1,
 	Industry: $.Industry
 } distinctBy $.Name]]></ee:set-payload>
-			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="accounts" ><![CDATA[%dw 2.0
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="accounts"><![CDATA[%dw 2.0
 output application/java
 ---
 []]]></ee:set-variable>
-			</ee:variables>
-		</ee:transform>
-		<foreach doc:name="For Each" doc:id="71329176-7835-49fd-9158-2584a76975a2" collection="#[payload]">
-			<ee:transform doc:name="Set Variable Item" doc:id="0cdbaca9-156b-4e6a-8b4c-e82f7e5c79f2" >
-				<ee:message >
-				</ee:message>
-				<ee:variables >
-					<ee:set-variable variableName="item" ><![CDATA[%dw 2.0
+            </ee:variables>
+        </ee:transform>
+        <foreach doc:name="For Each" doc:id="71329176-7835-49fd-9158-2584a76975a2" collection="#[payload]">
+            <ee:transform doc:name="Set Variable Item" doc:id="0cdbaca9-156b-4e6a-8b4c-e82f7e5c79f2">
+                <ee:message>
+                </ee:message>
+                <ee:variables>
+                    <ee:set-variable variableName="item"><![CDATA[%dw 2.0
 output application/java
 ---
 payload]]></ee:set-variable>
-				</ee:variables>
-			</ee:transform>
-			<s4hana:query doc:name="Query Business Partner Address" doc:id="07746c8b-138f-453e-87fc-9bedd17047f8" config-ref="SAP_S_4HANA_Config" service="API_BUSINESS_PARTNER" entityType="A_BusinessPartnerAddress" filter="#[&quot;BusinessPartner eq '&quot; ++ vars.item.BusinessPartner as String ++ &quot;' &quot;]" select="CityName,Country,PostalCode,Region,StreetName"/>
-			<ee:transform doc:name="Extend partner data about Address" doc:id="5951cd72-6002-4c9c-bf67-34a0a2fc8eae">
-			<ee:message>
-			</ee:message>
-				<ee:variables >
-					<ee:set-variable variableName="accounts" ><![CDATA[%dw 2.0
+                </ee:variables>
+            </ee:transform>
+            <s4hana:query doc:name="Query Business Partner Address" doc:id="07746c8b-138f-453e-87fc-9bedd17047f8" config-ref="SAP_S_4HANA_Config"
+                service="API_BUSINESS_PARTNER" entityType="A_BusinessPartnerAddress"
+                filter="#[&quot;BusinessPartner eq '&quot; ++ vars.item.BusinessPartner as String ++ &quot;' &quot;]" select="CityName,Country,PostalCode,Region,StreetName" />
+            <ee:transform doc:name="Extend partner data about Address" doc:id="5951cd72-6002-4c9c-bf67-34a0a2fc8eae">
+                <ee:message>
+                </ee:message>
+                <ee:variables>
+                    <ee:set-variable variableName="accounts"><![CDATA[%dw 2.0
 output application/java
 var account = {
 	Name: vars.item.Name,
@@ -131,26 +134,26 @@ var account = {
 }
 ---
 vars.accounts + account]]></ee:set-variable>
-				</ee:variables>
-		</ee:transform>
-		</foreach>
-		<ee:transform doc:name="Set payload" doc:id="ae8f744f-3d83-49ad-b486-55db4fb390a4" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+                </ee:variables>
+            </ee:transform>
+        </foreach>
+        <ee:transform doc:name="Set payload" doc:id="ae8f744f-3d83-49ad-b486-55db4fb390a4">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 vars.accounts]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<logger level="INFO" doc:name="Log Partners from S4HANA" doc:id="314adda7-b799-4396-8314-03cdaf47ae2a" message="Partners from S4HANA: #[output application/json --- payload]" />
-	</flow>
-	<flow name="mainFlow" doc:id="f3a8e0da-9941-467d-a9ae-f0cb4ed3cb60" >
-		<flow-ref doc:name="Call queryFlow" doc:id="2c5cad68-87ea-49d3-b781-c678ea69c0b9" name="queryFlow"/>
-		<flow-ref doc:name="Call businessLogicFlow" doc:id="d6a390d1-345e-412a-827a-3342f5500b8a" name="businessLogicFlow"/>
-		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9dab06fe-6e53-497e-bd68-af2bb1bb6420" >
-				<flow-ref doc:name="Call errorHandlingFlow" doc:id="ac7d6970-c5d3-4d7d-b63f-7ab4366dd4ff" name="errorHandlingFlow"/>
-			</on-error-propagate>
-		</error-handler>
-	</flow>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Log Partners from S4HANA" doc:id="314adda7-b799-4396-8314-03cdaf47ae2a" message="Partners from S4HANA: #[output application/json --- payload]" />
+    </flow>
+    <flow name="mainFlow" doc:id="f3a8e0da-9941-467d-a9ae-f0cb4ed3cb60">
+        <flow-ref doc:name="Call queryFlow" doc:id="2c5cad68-87ea-49d3-b781-c678ea69c0b9" name="queryFlow" />
+        <flow-ref doc:name="Call businessLogicFlow" doc:id="d6a390d1-345e-412a-827a-3342f5500b8a" name="businessLogicFlow" />
+        <error-handler>
+            <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9dab06fe-6e53-497e-bd68-af2bb1bb6420">
+                <flow-ref doc:name="Call errorHandlingFlow" doc:id="ac7d6970-c5d3-4d7d-b63f-7ab4366dd4ff" name="errorHandlingFlow" />
+            </on-error-propagate>
+        </error-handler>
+    </flow>
 </mule>
