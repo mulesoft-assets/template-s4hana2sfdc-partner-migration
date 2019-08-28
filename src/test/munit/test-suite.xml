@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+    xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <munit:config name="test-suite.xml" doc:name="MUnit configuration" />
+
+    <configuration-properties doc:name="Configuration properties" doc:id="c382dc50-b83c-41be-ad31-42ccb929d758" file="mule.test.properties" />
+
+    <munit:before-test name="test-suiteBefore_Test" description="Before tests actions" doc:id="7f8facb1-95ae-4456-9448-faf3a3a89dc9">
+        <ee:transform doc:name="Set test data" doc:id="09e499de-dcf7-48ca-bf3c-d51292ddc4bb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	"Name": p('test.partner.update')
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:upsert doc:name="Upsert test data" doc:id="101078bf-ca12-493c-b3fe-9e685c1e8cf6" config-ref="Salesforce_Config" externalIdFieldName="Id" type="Account"/>
+		<munit-tools:mock-when doc:name="Mock email processor to avoid sending email" doc:id="17ab3357-3f08-4456-9f14-c41c281e06f1"
+            processor="email:send">
+            <munit-tools:then-return />
+        </munit-tools:mock-when>
+    </munit:before-test>
+    <munit:test name="test-suite-businesslogicFlowTest" description="Test" doc:id="4ffcda90-21bf-4cd4-9460-09cf6ca578e5">
+        <munit:execution>
+            <flow-ref doc:name="Call queryFlow" doc:id="b063b51a-935d-4c26-a718-d85bda7ff204" name="queryFlow" />
+            <ee:transform doc:name="Filter test Records" doc:id="718e0feb-96f0-4484-b203-4d2e1fcac239">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.Name == p('test.partner.insert')
+    or $.Name == p('test.partner.update')  
+)]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <flow-ref doc:name="Call businessLogicFlow" doc:id="3e0601a1-1b47-4974-83b0-8d30726559dd" name="businessLogicFlow" />
+            <scripting:execute doc:name="Sleep for 30s until the processing is completed" doc:id="b09fe305-3000-4571-b824-8b555395ccb7"
+                engine="groovy">
+                <scripting:code>sleep(30000)</scripting:code>
+            </scripting:execute>
+            <salesforce:query doc:name="Query for Account, which should be migrated" doc:id="bfe557e1-98d0-493f-adf2-45dbe2ca140b"
+                config-ref="Salesforce_Config" target="resultInsert">
+                <salesforce:salesforce-query>SELECT Id FROM Account WHERE Name = ':name'</salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"name" : p('test.partner.insert')
+}]]]></salesforce:parameters>
+            </salesforce:query>
+			<salesforce:query doc:name="Query for Account, which should be updated" doc:id="b7ae1d02-347e-4b16-94f9-dd43e02c7457" config-ref="Salesforce_Config" target="resultUpdate" >
+				<salesforce:salesforce-query >SELECT Id, Industry FROM Account WHERE Name = ':name'</salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"name" : p('test.partner.update')
+}]]]></salesforce:parameters>
+			</salesforce:query>
+			<salesforce:delete doc:name="Delete test Accounts" doc:id="e2cbd9da-c28d-42b5-b082-96bea6e6c480" config-ref="Salesforce_Config">
+				<salesforce:delete-ids ><![CDATA[#[[vars.resultInsert.Id[0], vars.resultUpdate.Id[0]]]]]></salesforce:delete-ids>
+			</salesforce:delete>
+        </munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that Account was migrated" doc:id="225cb605-31a6-46b6-aa7a-9d7d7522774a" expression="#[sizeOf(vars.resultInsert)]" is="#[MunitTools::equalTo(1)]" message="Account wasn't migrated"/>
+			<munit-tools:assert-that doc:name="Assert that Account was updated" doc:id="db8c67c8-8261-45d0-a0d3-09177f9d72b6" message="Account wasn't updated" expression="#[vars.resultUpdate.Industry[0]]" is="#[MunitTools::notNullValue()]"/>
+        </munit:validation>
+    </munit:test>
+</mule>

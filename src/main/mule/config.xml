@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mule xmlns:s4hana="http://www.mulesoft.org/schema/mule/s4hana" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+    xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  
+    http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd  
+    http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+    http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+    http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+    http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd 
+    http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+	http://www.mulesoft.org/schema/mule/s4hana http://www.mulesoft.org/schema/mule/s4hana/current/mule-s4hana.xsd">
+
+    <global-property doc:name="Global Property" name="mule.env" value="dev" />
+
+    <configuration-properties file="common.properties" doc:id="3e0bbeef-93b8-4af8-ae98-8bd7932a6fd6" doc:name="Configuration properties" />
+    <configuration-properties file="mule.${mule.env}.properties" doc:id="12b12bba-f1c0-42d4-bac1-a6c5dc223077" doc:name="Configuration properties" />
+
+    <http:listener-config name="HTTP_Listener_config" doc:id="8c32e813-82b9-416c-b91d-441765e09cce" doc:name="HTTP Listener config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}" />
+    </http:listener-config>
+
+    <s4hana:config name="SAP_S_4HANA_Config" doc:name="SAP S 4HANA Config" doc:id="6bab4ea6-ca47-45ba-831e-bde74987647c">
+        <s4hana:basic-authentication-connection username="${s4hana.username}" baseUrl="${s4hana.baseUrl}"
+            password="${s4hana.password}" />
+    </s4hana:config>
+
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="0d291771-3ad0-4662-a4cc-a6c9fc351448">
+        <salesforce:cached-basic-connection username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.securityToken}" />
+    </salesforce:sfdc-config>
+
+    <email:smtp-config name="Email_SMTPS" doc:id="efb4579d-b9fa-4f54-8036-2356f07b7ff4" doc:name="Email SMTP">
+        <email:smtps-connection host="${smtp.host}" password="${smtp.password}" port="${smtp.port}" tlsContext="TLS_Context"
+            user="${smtp.user}" />
+    </email:smtp-config>
+
+    <tls:context name="TLS_Context" doc:id="f2135468-7efa-4e92-a191-eaca88df39f2" doc:name="TLS Context">
+        <tls:trust-store insecure="true" />
+    </tls:context>
+</mule>

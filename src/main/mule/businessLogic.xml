@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:s4hana="http://www.mulesoft.org/schema/mule/s4hana" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+    xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/s4hana http://www.mulesoft.org/schema/mule/s4hana/current/mule-s4hana.xsd">
+
+    <flow name="businessLogicFlow" doc:id="aff4106d-d2f6-4366-940a-a380dcb1cf73">
+        <batch:job jobName="migratePartnersBatch" doc:id="204892ae-0d97-4326-beae-310c8d52b7a6">
+            <batch:process-records>
+                <batch:step name="migratePartnersToSalesforceStep" doc:id="b70728ef-c10d-4c09-9f63-d49ceeb0f2d3">
+                    <batch:aggregator doc:name="Batch Aggregator" doc:id="0fa09d11-e059-4d6c-a73c-78a767ccb95f" size="${page.size}">
+                        <salesforce:query doc:name="Query Accounts" doc:id="1e363cc8-e71b-49c2-8329-3b9ff15da26b" config-ref="Salesforce_Config"
+                            target="sfdcAccounts">
+                            <salesforce:salesforce-query>SELECT Id, Name FROM Account WHERE Name in (':accounts')</salesforce:salesforce-query>
+                            <salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"accounts" : payload.Name joinBy "', '"
+}]]]></salesforce:parameters>
+                        </salesforce:query>
+                        <ee:transform doc:name="Add Ids to Accounts" doc:id="f8a3d3e5-42ad-4dfb-93f2-6c1b8e77e3a3">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+var accounts = payload ++ vars.sfdcAccounts groupBy $.Name
+output application/json
+---
+payload map {
+    ($ ++ {Id: accounts[$.Name].Id[0]})
+}]]></ee:set-payload>
+                            </ee:message>
+                            <ee:variables>
+                            </ee:variables>
+                        </ee:transform>
+                        <logger level="INFO" doc:name="Log Accounts" doc:id="ba2aca3c-1865-4f3a-b3a2-13f3d86edd53" message="Accounts to upsert: #[output application/json --- payload]" />
+						<salesforce:upsert type="Account" doc:name="Upsert Accounts" doc:id="7e1bb5b7-85ec-4b60-9350-d9ac956f4d46" config-ref="Salesforce_Config" externalIdFieldName="Id"/>
+                        <logger level="INFO" doc:name="Log Upsert result" doc:id="80af8570-bee4-415e-8880-b5b017873028" message="#[output application/json --- payload]"/>
+                    </batch:aggregator>
+                </batch:step>
+            </batch:process-records>
+            <batch:on-complete>
+                <scatter-gather doc:name="Scatter-Gather" doc:id="ef2964ef-0b85-4c6c-a5ee-b834df639e7b">
+                    <route>
+                        <logger level="INFO" doc:name="Migration process has finished!" doc:id="b7575d38-7dbd-4602-9186-1bbb25234896" message="Migration process has finished!" />
+                    </route>
+                    <route>
+                        <ee:transform doc:name="Prepare migration result email" doc:id="c84b4bc4-5a65-41c1-9d0c-f1ebd3d8db7a">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+"Migration Report: \n"
+ 
+++ "\n Time [milliseconds]: " 	++ payload.elapsedTimeInMillis!
+++ "\n Total Records: "		    ++ payload.totalRecords!
+++ "\n Successful Records: "		++ payload.successfulRecords!
+++ "\n Failed Records: "			++ payload.failedRecords!
+++ "\n Loaded Records: "			++ payload.loadedRecords!
+++ "\n Processed Records: " 		++ payload.processedRecords!]]></ee:set-payload>
+                            </ee:message>
+                        </ee:transform>
+                        <email:send config-ref="Email_SMTPS" doc:name="Send email" doc:id="5896eaa9-dd10-47a2-a6fc-6319b11dbd06"
+                            fromAddress="${mail.from}" subject="${mail.subject}">
+                            <email:to-addresses>
+                                <email:to-address value="${mail.to}" />
+                            </email:to-addresses>
+                        </email:send>
+                    </route>
+                </scatter-gather>
+            </batch:on-complete>
+        </batch:job>
+        <logger level="INFO" doc:name="Log - Migration process has started!" doc:id="673c18b0-db38-44f6-95ef-69edd1e75ed6" message="Migration process has started!" />
+    </flow>
+
+    <flow name="queryFlow" doc:id="b0338e9a-92cc-4b2a-b219-4360c4a7bdb0">
+        <s4hana:query service="API_BUSINESS_PARTNER" entityType="A_BusinessPartner" doc:name="Query Business Partners" doc:id="cc3b34ed-f346-4267-9e24-1d2174823eb5"
+            config-ref="SAP_S_4HANA_Config" filter="BusinessPartnerCategory eq '2' " top="#[p('s4hana.partners.limit')]" select="OrganizationBPName1,BusinessPartner,Industry" />
+		<ee:transform doc:name="Set Variable and input data" doc:id="0e7f5883-05df-462f-a5cd-bacb003d78dd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map {
+	BusinessPartner: $.BusinessPartner,
+	Name: $.OrganizationBPName1,
+	Industry: $.Industry
+} distinctBy $.Name]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="accounts" ><![CDATA[%dw 2.0
+output application/java
+---
+[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="71329176-7835-49fd-9158-2584a76975a2" collection="#[payload]">
+			<ee:transform doc:name="Set Variable Item" doc:id="0cdbaca9-156b-4e6a-8b4c-e82f7e5c79f2" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="item" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<s4hana:query doc:name="Query Business Partner Address" doc:id="07746c8b-138f-453e-87fc-9bedd17047f8" config-ref="SAP_S_4HANA_Config" service="API_BUSINESS_PARTNER" entityType="A_BusinessPartnerAddress" filter="#[&quot;BusinessPartner eq '&quot; ++ vars.item.BusinessPartner as String ++ &quot;' &quot;]" select="CityName,Country,PostalCode,Region,StreetName"/>
+			<ee:transform doc:name="Extend partner data about Address" doc:id="5951cd72-6002-4c9c-bf67-34a0a2fc8eae">
+			<ee:message>
+			</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="accounts" ><![CDATA[%dw 2.0
+output application/java
+var account = {
+	Name: vars.item.Name,
+	Industry: vars.item.Industry,
+	BillingCity: payload[0].CityName,
+	BillingCountry: payload[0].Country,
+	BillingPostalCode: payload[0].PostalCode,
+	BillingState: payload[0].Region, 
+	BillingStreet: payload[0].StreetName
+}
+---
+vars.accounts + account]]></ee:set-variable>
+				</ee:variables>
+		</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Set payload" doc:id="ae8f744f-3d83-49ad-b486-55db4fb390a4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+vars.accounts]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Partners from S4HANA" doc:id="314adda7-b799-4396-8314-03cdaf47ae2a" message="Partners from S4HANA: #[output application/json --- payload]" />
+	</flow>
+	<flow name="mainFlow" doc:id="f3a8e0da-9941-467d-a9ae-f0cb4ed3cb60" >
+		<flow-ref doc:name="Call queryFlow" doc:id="2c5cad68-87ea-49d3-b781-c678ea69c0b9" name="queryFlow"/>
+		<flow-ref doc:name="Call businessLogicFlow" doc:id="d6a390d1-345e-412a-827a-3342f5500b8a" name="businessLogicFlow"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9dab06fe-6e53-497e-bd68-af2bb1bb6420" >
+				<flow-ref doc:name="Call errorHandlingFlow" doc:id="ac7d6970-c5d3-4d7d-b63f-7ab4366dd4ff" name="errorHandlingFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
