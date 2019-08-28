@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:s4hana="http://www.mulesoft.org/schema/mule/s4hana" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-    xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+    xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:email="http://www.mulesoft.org/schema/mule/email" 
     xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
-http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
@@ -61,12 +60,12 @@ output text/plain
 ---
 "Migration Report: \n"
  
-++ "\n Time [milliseconds]: " 	++ payload.elapsedTimeInMillis!
-++ "\n Total Records: "		    ++ payload.totalRecords!
-++ "\n Successful Records: "		++ payload.successfulRecords!
-++ "\n Failed Records: "			++ payload.failedRecords!
-++ "\n Loaded Records: "			++ payload.loadedRecords!
-++ "\n Processed Records: " 		++ payload.processedRecords!]]></ee:set-payload>
+++ "\n Time [milliseconds]: " ++ payload.elapsedTimeInMillis!
+++ "\n Total Records: " ++ payload.totalRecords!
+++ "\n Successful Records: " ++ payload.successfulRecords!
+++ "\n Failed Records: " ++ payload.failedRecords!
+++ "\n Loaded Records: " ++ payload.loadedRecords!
+++ "\n Processed Records: " ++ payload.processedRecords!]]></ee:set-payload>
                             </ee:message>
                         </ee:transform>
                         <email:send config-ref="Email_SMTPS" doc:name="Send email" doc:id="5896eaa9-dd10-47a2-a6fc-6319b11dbd06"
