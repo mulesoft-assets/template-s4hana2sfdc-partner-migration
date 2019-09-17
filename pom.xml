@@ -9,7 +9,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>template-s4hana2sfdc-partner-migration</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1-SNAPSHOT</version>
     <packaging>mule-application</packaging>
     <name>template-s4hana2sfdc-partner-migration</name>
 
@@ -105,4 +105,4 @@
         </repository>
     </repositories>
 
-<scm><connection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</connection><developerConnection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</developerConnection><url>https://github.com/mulesoft/template-s4hana2sfdc-partner-migration</url><tag>v2.1.0</tag></scm></project>
+<scm><connection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</connection><developerConnection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</developerConnection><url>https://github.com/mulesoft/template-s4hana2sfdc-partner-migration</url><tag>HEAD</tag></scm></project>
