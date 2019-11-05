@@ -105,4 +105,4 @@
         </repository>
     </repositories>
 
-</project>
+<scm><connection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</connection><developerConnection>scm:git:git@github.com:mulesoft/template-s4hana2sfdc-partner-migration.git</developerConnection><url>https://github.com/mulesoft/template-s4hana2sfdc-partner-migration</url><tag>HEAD</tag></scm></project>
